@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hill Cipher — BSM CS 2A</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06060f; --surf:#0f0f1c; --s2:#17172a; --s3:#1e1e34;
+  --bdr:#252540; --acc:#7c3aed; --acc2:#06b6d4; --acc3:#f59e0b;
+  --txt:#dde1f0; --dim:#7778a0; --mut:#3e3e60;
+  --grn:#10b981; --red:#ef4444;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'Space Mono',monospace;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(124,58,237,.035) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(124,58,237,.035) 1px,transparent 1px);
+  background-size:48px 48px;animation:gd 24s linear infinite;pointer-events:none;z-index:0;}
+@keyframes gd{to{background-position:48px 48px;}}
+.orb{position:fixed;border-radius:50%;filter:blur(100px);pointer-events:none;z-index:0;animation:of 14s ease-in-out infinite;}
+.o1{width:500px;height:500px;background:rgba(124,58,237,.06);top:-150px;left:-150px;}
+.o2{width:380px;height:380px;background:rgba(6,182,212,.05);bottom:-100px;right:-100px;animation-delay:-7s;}
+@keyframes of{0%,100%{transform:translate(0,0);}50%{transform:translate(30px,-30px);}}
+.w{max-width:1080px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
+
+/* HEADER */
+header{padding:48px 0 24px;border-bottom:1px solid var(--bdr);}
+.ey{font-size:10px;letter-spacing:.26em;color:var(--acc);text-transform:uppercase;animation:fu .5s ease both;}
+h1{font-family:'Syne',sans-serif;font-size:clamp(30px,5.5vw,54px);font-weight:800;line-height:1.05;
+  background:linear-gradient(125deg,#fff,#c4b5fd 50%,#06b6d4);-webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;background-clip:text;animation:fu .6s .08s ease both;}
+.sub{font-size:11px;color:var(--dim);max-width:520px;line-height:1.9;margin-top:8px;animation:fu .6s .16s ease both;}
+@keyframes fu{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+
+/* TABS */
+.tabs{display:flex;gap:3px;padding:22px 0 0;flex-wrap:wrap;animation:fu .6s .22s ease both;}
+.tb{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.08em;padding:9px 16px;
+  border:1px solid var(--bdr);background:transparent;color:var(--dim);cursor:pointer;
+  transition:all .18s;text-transform:uppercase;}
+.tb:hover{border-color:var(--acc);color:var(--txt);}
+.tb.on{background:var(--acc);border-color:var(--acc);color:#fff;}
+
+/* PANELS */
+.main{padding:26px 0 80px;}
+.panel{display:none;}
+.panel.on{display:block;animation:fu .28s ease both;}
+
+/* CARD */
+.card{background:var(--surf);border:1px solid var(--bdr);padding:20px;margin-bottom:12px;}
+.ct{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--acc2);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.ct::before{content:'';width:3px;height:12px;background:var(--acc2);display:block;}
+
+/* INPUTS */
+textarea,input{width:100%;background:var(--bg);border:1px solid var(--bdr);color:var(--txt);
+  font-family:'Space Mono',monospace;font-size:13px;padding:12px;outline:none;
+  transition:border-color .18s,box-shadow .18s;line-height:1.6;}
+textarea:focus,input:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(124,58,237,.15);}
+textarea{resize:vertical;min-height:100px;}
+
+/* BUTTONS */
+.btn{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  padding:10px 22px;border:none;cursor:pointer;transition:all .18s;
+  display:inline-flex;align-items:center;gap:6px;}
+.btn:active{transform:scale(.96);}
+.bp{background:var(--acc);color:#fff;}
+.bp:hover{background:#6d28d9;transform:translateY(-1px);}
+.bt{background:var(--acc2);color:#000;}
+.bt:hover{background:#0891b2;transform:translateY(-1px);}
+.bs{background:transparent;border:1px solid var(--bdr);color:var(--dim);}
+.bs:hover{border-color:var(--acc2);color:var(--acc2);}
+
+/* OUTPUT */
+.out{background:var(--bg);border:1px solid var(--bdr);padding:14px;font-size:13px;
+  min-height:70px;word-break:break-all;color:var(--acc3);position:relative;line-height:1.8;}
+
+/* MISC */
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:640px){.two{grid-template-columns:1fr;}}
+.lsm{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:4px;display:block;}
+.err{color:var(--red);font-size:11px;padding:8px 12px;background:rgba(239,68,68,.06);
+  border:1px solid rgba(239,68,68,.2);margin-top:8px;display:none;}
+.err.on{display:block;}
+.cpbtn{position:absolute;top:7px;right:7px;font-size:9px;padding:3px 8px;
+  background:var(--s2);border:1px solid var(--bdr);color:var(--dim);cursor:pointer;font-family:'Space Mono',monospace;}
+.cpbtn:hover{color:var(--txt);}
+
+/* TOGGLE */
+.trow{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim);margin-top:10px;cursor:pointer;user-select:none;}
+.tog{width:34px;height:19px;background:var(--mut);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0;}
+.tog.on{background:var(--acc);}
+.tog::after{content:'';position:absolute;width:13px;height:13px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .2s;}
+.tog.on::after{left:18px;}
+
+/* SPINNER */
+.spin{display:inline-block;width:11px;height:11px;border:2px solid rgba(255,255,255,.2);
+  border-top-color:#fff;border-radius:50%;animation:sp .5s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+
+/* PBAR */
+.pbar{height:2px;background:var(--bdr);margin:9px 0;overflow:hidden;}
+.pfill{height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2),var(--acc3));width:0%;transition:width .06s;}
+
+/* ──────────────────────────────────────────────────────
+   MATRIX MULTIPLICATION ANIMATOR
+   ────────────────────────────────────────────────────── */
+.mm-stage{
+  background:var(--s2);border:1px solid var(--bdr);padding:16px 20px;
+  display:flex;align-items:flex-start;gap:24px;flex-wrap:wrap;
+  margin:10px 0;min-height:180px;
+}
+
+/* bracket matrix */
+.bmat{display:inline-flex;flex-direction:column;gap:0;position:relative;padding:0 14px;}
+.bmat::before,.bmat::after{
+  content:'';position:absolute;top:0;bottom:0;width:7px;border:2px solid;
+}
+.bmat::before{left:0;border-right:none;border-color:inherit;}
+.bmat::after{right:0;border-left:none;border-color:inherit;}
+.bmat.c-acc{border-color:var(--acc);}
+.bmat.c-acc2{border-color:var(--acc2);}
+.bmat.c-grn{border-color:var(--grn);}
+
+.bmat-row{display:flex;gap:4px;margin:2px 0;}
+/* each cell */
+.mc{
+  width:42px;height:38px;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;border:1px solid var(--bdr);background:var(--s3);
+  color:var(--txt);transition:background .25s,border-color .25s,color .25s,transform .2s;
+  position:relative;
+}
+/* highlight states */
+.mc.hl-row{background:rgba(124,58,237,.28);border-color:var(--acc);color:#fff;transform:scale(1.06);}
+.mc.hl-col{background:rgba(6,182,212,.22);border-color:var(--acc2);color:#fff;transform:scale(1.06);}
+.mc.hl-res{background:rgba(16,185,129,.22);border-color:var(--grn);color:var(--grn);
+  animation:resPop .35s ease both;}
+@keyframes resPop{0%{transform:scale(.5);opacity:0;}65%{transform:scale(1.18);}100%{transform:scale(1);opacity:1;}}
+
+.mm-op{font-size:22px;color:var(--acc);align-self:center;font-weight:700;padding:0 2px;}
+.mm-eq{font-size:22px;color:var(--acc2);align-self:center;padding:0 2px;}
+
+/* right-side computation panel */
+.mm-calc{
+  flex:1;min-width:220px;display:flex;flex-direction:column;gap:8px;align-self:center;
+}
+.mm-row-calc{
+  background:var(--s3);border:1px solid var(--bdr);border-left:3px solid var(--bdr);
+  padding:8px 12px;font-size:11px;line-height:1.8;
+  transition:border-left-color .2s,background .2s,opacity .2s;
+  opacity:.3;
+}
+.mm-row-calc.active{
+  border-left-color:var(--acc);background:rgba(124,58,237,.08);opacity:1;
+}
+.mm-row-calc.done{
+  border-left-color:var(--grn);background:rgba(16,185,129,.06);opacity:1;
+}
+.mm-row-calc .terms{color:var(--dim);font-size:11px;}
+.mm-row-calc .terms .ka{color:var(--acc);font-weight:700;}
+.mm-row-calc .terms .kb{color:var(--acc2);font-weight:700;}
+.mm-row-calc .raw{color:var(--acc3);}
+.mm-row-calc .mod{color:var(--dim);font-size:10px;}
+.mm-row-calc .final{color:var(--grn);font-weight:700;font-size:13px;}
+.mm-row-calc .fc{color:#fff;background:var(--acc);padding:1px 5px;font-size:12px;
+  animation:fcPop .3s ease both;}
+@keyframes fcPop{from{opacity:0;transform:scale(.6);}to{opacity:1;transform:scale(1);}}
+
+/* block label + result below matrix */
+.bmat-label{font-size:9px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;text-align:center;margin-bottom:4px;}
+.bmat-wrap{display:flex;flex-direction:column;align-items:center;}
+.bmat-result{margin-top:6px;font-size:11px;color:var(--grn);text-align:center;
+  opacity:0;transition:opacity .3s;font-weight:700;}
+.bmat-result.on{opacity:1;}
+
+/* BLOCK NAVIGATOR */
+.block-nav{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+.blk-pill{
+  font-size:10px;padding:4px 10px;border:1px solid var(--bdr);background:transparent;
+  color:var(--dim);cursor:pointer;font-family:'Space Mono',monospace;transition:all .15s;
+}
+.blk-pill:hover{border-color:var(--acc2);color:var(--acc2);}
+.blk-pill.on{background:var(--acc2);border-color:var(--acc2);color:#000;font-weight:700;}
+.blk-pill.done{border-color:var(--grn);color:var(--grn);}
+.blk-speed{font-size:10px;color:var(--dim);display:flex;align-items:center;gap:6px;margin-left:auto;}
+.blk-speed input{width:80px;padding:4px 6px;font-size:11px;}
+
+/* PADDING NOTICE */
+.pad-notice{
+  display:flex;align-items:flex-start;gap:8px;padding:8px 12px;
+  background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.25);
+  font-size:11px;color:var(--acc3);margin:6px 0;
+  animation:fu .3s ease;
+}
+
+/* key matrix editor */
+.kgrid{display:grid;grid-template-columns:repeat(3,72px);gap:5px;margin-top:8px;}
+.kgrid input{width:72px;text-align:center;font-size:15px;font-weight:700;padding:9px 4px;}
+.kbkt{display:flex;align-items:center;gap:10px;margin-top:8px;}
+.bkt{font-size:60px;line-height:1;color:var(--acc);user-select:none;}
+
+/* derived value pop animation */
+@keyframes valPop{
+  0%{transform:scale(1);}
+  30%{transform:scale(1.35);color:#fff;text-shadow:0 0 14px var(--acc3);}
+  100%{transform:scale(1);}
+}
+.pop{animation:valPop .5s ease both;}
+
+/* lookup table */
+.lk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:4px;max-height:340px;overflow-y:auto;margin-top:8px;}
+.lk-cell{background:var(--s2);border:1px solid var(--bdr);padding:5px 3px;text-align:center;
+  cursor:pointer;transition:border-color .15s;position:relative;}
+.lk-cell:hover{border-color:var(--acc2);}
+.lk-cell .lc{font-size:14px;font-weight:700;color:var(--acc3);}
+.lk-cell .ln{font-size:9px;color:var(--mut);}
+.lk-cell .lx{position:absolute;top:1px;right:2px;font-size:9px;color:var(--mut);cursor:pointer;padding:1px 3px;}
+.lk-cell .lx:hover{color:var(--red);}
+.lk-tb{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;}
+.lk-add{display:flex;gap:6px;align-items:center;padding:10px;background:var(--s2);border:1px solid var(--bdr);margin-top:8px;}
+.lk-add input{width:60px;padding:7px;}
+.n-tag{display:inline-block;font-size:11px;color:var(--acc3);font-weight:700;transition:all .2s;}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--bdr);}
+
+/* char drop animation used by the growing output bar */
+@keyframes blockCharDrop{
+  0%  {opacity:0;transform:translateY(-10px) scale(.7);}
+  60% {opacity:1;transform:translateY(2px) scale(1.1);}
+  100%{opacity:1;transform:translateY(0)  scale(1);}
+}
+</style>
+</head>
+<body>
+<div class="o1 orb"></div><div class="o2 orb"></div>
+<div class="w">
+<header>
+  <div class="ey">Linear Algebra · Cryptography · BSM CS 2A</div>
+  <h1>Hill Cipher</h1>
+  <p class="sub">Matrix encryption over ℤₙ · Ronald Vincent G. Sarmiento · BSM CS 2A · Bulacan State University</p>
+  <div class="tabs">
+    <button class="tb on"  onclick="goTab('enc',this)">🔒 Encrypt</button>
+    <button class="tb"     onclick="goTab('dec',this)">🔓 Decrypt</button>
+    <button class="tb"     onclick="goTab('key',this)">🔑 Key Matrix</button>
+    <button class="tb"     onclick="goTab('lk',this)" >📋 Lookup Table</button>
+  </div>
+</header>
+
+<div class="main">
+
+<!-- ═══════ ENCRYPT ═══════ -->
+<div id="p-enc" class="panel on">
+  <div class="card">
+    <div class="ct">Plaintext</div>
+    <textarea id="ptxt" oninput="resetOut('enc')">I am me. A me who is just a person.</textarea>
+    <div class="pbar"><div class="pfill" id="ep"></div></div>
+    <div class="row">
+      <button class="btn bp" id="ebtn" onclick="doEncrypt()">▶ Encrypt</button>
+      <button class="btn bs" onclick="document.getElementById('ptxt').value='';resetOut('enc')">Clear</button>
+      <label class="trow" onclick="togCalc('enc')"><div class="tog" id="tenc"></div>Show calculations</label>
+    </div>
+    <div class="err" id="eerr"></div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <div class="ct">Ciphertext Output</div>
+      <div class="out" id="eout" style="position:relative">
+        <span style="color:var(--mut);font-style:italic">Ciphertext appears here…</span>
+        <button class="cpbtn" onclick="doCopy('eout')">COPY</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct">Info</div>
+      <div id="einfo" style="font-size:11px;color:var(--dim);line-height:2.2">—</div>
+    </div>
+  </div>
+
+  <div id="ecalc" style="display:none">
+    <div class="card">
+      <div class="ct">Step-by-Step Calculations</div>
+      <div id="ecalc-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ DECRYPT ═══════ -->
+<div id="p-dec" class="panel">
+  <div class="card">
+    <div class="ct">Ciphertext</div>
+    <textarea id="ctxt" oninput="resetOut('dec')" placeholder="Paste ciphertext here…"></textarea>
+    <div class="pbar"><div class="pfill" id="dp"></div></div>
+    <div class="row">
+      <button class="btn bt" id="dbtn" onclick="doDecrypt()">▶ Decrypt</button>
+      <button class="btn bs" onclick="document.getElementById('ctxt').value='';resetOut('dec')">Clear</button>
+      <label class="trow" onclick="togCalc('dec')"><div class="tog" id="tdec"></div>Show calculations</label>
+    </div>
+    <div class="err" id="derr"></div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <div class="ct">Plaintext Output</div>
+      <div class="out" id="dout" style="position:relative;color:var(--grn)">
+        <span style="color:var(--mut);font-style:italic">Plaintext appears here…</span>
+        <button class="cpbtn" onclick="doCopy('dout')">COPY</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct">Info</div>
+      <div id="dinfo" style="font-size:11px;color:var(--dim);line-height:2.2">—</div>
+    </div>
+  </div>
+
+  <div id="dcalc" style="display:none">
+    <div class="card">
+      <div class="ct">Step-by-Step Calculations</div>
+      <div id="dcalc-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ KEY MATRIX ═══════ -->
+<div id="p-key" class="panel">
+  <div class="card">
+    <div class="ct">Key Matrix K</div>
+    <p style="font-size:11px;color:var(--dim);line-height:1.9;margin-bottom:12px">
+      3×3 matrix used for encryption. Must be invertible mod n (the lookup table size).<br>
+      Default values are from the BSM CS 2A project paper.
+    </p>
+    <div class="kbkt">
+      <div class="bkt">[</div>
+      <div class="kgrid">
+        <input id="k00" value="12" oninput="kChanged()"><input id="k01" value="25" oninput="kChanged()"><input id="k02" value="7"  oninput="kChanged()">
+        <input id="k10" value="9"  oninput="kChanged()"><input id="k11" value="18" oninput="kChanged()"><input id="k12" value="11" oninput="kChanged()">
+        <input id="k20" value="4"  oninput="kChanged()"><input id="k21" value="10" oninput="kChanged()"><input id="k22" value="3"  oninput="kChanged()">
+      </div>
+      <div class="bkt">]</div>
+    </div>
+    <div class="row">
+      <button class="btn bp" onclick="validateK()">Validate &amp; Show K⁻¹</button>
+      <button class="btn bs" onclick="resetK()">Reset Default</button>
+    </div>
+    <div class="err" id="kerr"></div>
+  </div>
+
+  <div id="kinfo" style="display:none">
+    <div class="two">
+      <div class="card">
+        <div class="ct">Computed Values</div>
+        <div style="font-size:12px;line-height:2.4">
+          <span style="color:var(--dim)">det(K)&nbsp;</span><span class="n-tag" id="kdet">—</span><br>
+          <span style="color:var(--dim)">det mod n&nbsp;</span><span class="n-tag" id="kdetm">—</span><br>
+          <span style="color:var(--dim)">det⁻¹ mod n&nbsp;</span><span class="n-tag" id="kdinv">—</span><br>
+          <span style="color:var(--dim)">n&nbsp;</span><span class="n-tag" id="kn">—</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ct">Inverse Key K⁻¹</div>
+        <div id="kinvdisp" style="font-family:'Space Mono';font-size:13px;line-height:2.1;color:var(--grn)"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ LOOKUP TABLE ═══════ -->
+<div id="p-lk" class="panel">
+  <div class="card">
+    <div class="ct">Lookup Table</div>
+    <div class="lk-tb">
+      <button class="btn bp" onclick="showAddRow()">＋ Add</button>
+      <button class="btn bs" onclick="resetLookup()">Reset Default</button>
+      <span style="font-size:11px;color:var(--dim)">n = <span class="n-tag" id="lkn">95</span></span>
+    </div>
+    <div class="lk-grid" id="lkgrid"></div>
+    <div class="lk-add" id="lkadd" style="display:none">
+      <div>
+        <span class="lsm">Character</span>
+        <input id="add-ch" maxlength="1" placeholder="A" style="width:56px">
+      </div>
+      <div>
+        <span class="lsm">Insert at index</span>
+        <input id="add-idx" type="number" min="0" placeholder="95" style="width:70px">
+      </div>
+      <button class="btn bp" onclick="addMapping()">Add</button>
+      <button class="btn bs" onclick="hideAddRow()">Cancel</button>
+      <div class="err" id="adderr" style="margin-top:0"></div>
+    </div>
+  </div>
+</div>
+
+</div></div>
+
+<script>
+// ══════════════════════════════════════════
+// LOOKUP TABLE
+// ══════════════════════════════════════════
+const DEF = ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~';
+let CHARS = [...DEF]; // array, index = number, value = char
+
+const c2n = c => CHARS.indexOf(c);
+const n2c = n => { const m=CHARS.length; n=((n%m)+m)%m; return CHARS[n]||'?'; };
+const MOD = () => CHARS.length;
+
+function resetLookup(){
+  CHARS=[...DEF];
+  renderLK();
+  onTableChanged();
+}
+
+function renderLK(){
+  const g=document.getElementById('lkgrid');
+  g.innerHTML='';
+  CHARS.forEach((ch,i)=>{
+    const d=ch===' '?'␣':esc(ch);
+    const c=document.createElement('div');c.className='lk-cell';
+    c.innerHTML=`<div class="lc">${d}</div><div class="ln">${i}</div><div class="lx" onclick="delMapping(${i})" title="Delete">✕</div>`;
+    c.ondblclick=()=>editMapping(i);
+    g.appendChild(c);
+  });
+  popEl('lkn', CHARS.length);
+}
+
+function delMapping(i){
+  if(CHARS.length<=3){alert('Need at least 3 characters.');return;}
+  CHARS.splice(i,1);
+  renderLK();
+  onTableChanged();
+}
+
+function editMapping(i){
+  const ch=prompt(`Current char: "${CHARS[i]==='\n'?'\\n':CHARS[i]}"\nEnter new single character:`);
+  if(ch===null) return;
+  if(ch.length!==1){alert('Enter exactly one character.');return;}
+  if(CHARS.includes(ch)&&CHARS.indexOf(ch)!==i){alert('Character already exists.');return;}
+  CHARS[i]=ch;
+  renderLK();
+  onTableChanged();
+}
+
+function showAddRow(){document.getElementById('lkadd').style.display='flex';}
+function hideAddRow(){document.getElementById('lkadd').style.display='none';}
+
+function addMapping(){
+  const ch=document.getElementById('add-ch').value;
+  const idxRaw=document.getElementById('add-idx').value;
+  const idx=idxRaw===''?CHARS.length:parseInt(idxRaw);
+  const ae=document.getElementById('adderr');
+  ae.classList.remove('on');
+  if(!ch||ch.length!==1){ae.textContent='Enter exactly one character.';ae.classList.add('on');return;}
+  if(CHARS.includes(ch)){ae.textContent=`'${esc(ch)}' already in table.`;ae.classList.add('on');return;}
+  if(isNaN(idx)||idx<0||idx>CHARS.length){ae.textContent='Invalid index.';ae.classList.add('on');return;}
+  CHARS.splice(idx,0,ch);
+  renderLK();
+  onTableChanged();
+  hideAddRow();
+}
+
+function onTableChanged(){
+  // revalidate key matrix quietly
+  const res=compInv(K);
+  if(res){ Kinv=res.inv; }
+  else { Kinv=null; }
+  // refresh kinfo if visible
+  if(document.getElementById('kinfo').style.display!=='none') validateK();
+  // update n display
+  popEl('lkn', MOD());
+  popEl('kn', MOD());
+}
+
+// ══════════════════════════════════════════
+// MATH
+// ══════════════════════════════════════════
+let K=[[12,25,7],[9,18,11],[4,10,3]], Kinv=null;
+
+function mvmul(A,v){
+  const m=MOD();
+  return A.map(r=>((r.reduce((s,x,j)=>s+x*v[j],0))%m+m)%m);
+}
+function det3(M){const[[a,b,c],[d,e,f],[g,h,i]]=M;return a*(e*i-f*h)-b*(d*i-f*g)+c*(d*h-e*g);}
+function adj3(M){
+  const[[a,b,c],[d,e,f],[g,h,i]]=M;
+  const cf=[[e*i-f*h,-(d*i-f*g),d*h-e*g],[-(b*i-c*h),a*i-c*g,-(a*h-b*g)],[b*f-c*e,-(a*f-c*d),a*e-b*d]];
+  return cf[0].map((_,j)=>cf.map(r=>r[j]));
+}
+function modInv(a,m){a=((a%m)+m)%m;for(let x=1;x<m;x++)if(a*x%m===1)return x;return null;}
+function compInv(M){
+  const m=MOD(),d=det3(M),dm=((d%m)+m)%m,di=modInv(dm,m);
+  if(di===null)return null;
+  const adj=adj3(M);
+  const inv=adj.map(r=>r.map(v=>((v%m+m)%m*di)%m));
+  return{inv,d,dm,di,adj};
+}
+
+// ══════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function popEl(id, val){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.textContent=val;
+  el.classList.remove('pop');
+  void el.offsetWidth;
+  el.classList.add('pop');
+}
+
+let showEnc=false, showDec=false;
+function togCalc(t){
+  if(t==='enc'){showEnc=!showEnc;document.getElementById('tenc').classList.toggle('on',showEnc);document.getElementById('ecalc').style.display=showEnc?'block':'none';}
+  else{showDec=!showDec;document.getElementById('tdec').classList.toggle('on',showDec);document.getElementById('dcalc').style.display=showDec?'block':'none';}
+}
+
+function goTab(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('p-'+id).classList.add('on'); btn.classList.add('on');
+  if(id==='lk'){renderLK();}
+  if(id==='key'){validateK();}
+}
+
+function showErr(id,msg){const e=document.getElementById(id);e.textContent='⚠ '+msg;e.classList.add('on');}
+function hideErr(id){document.getElementById(id).classList.remove('on');}
+
+function doCopy(id){
+  const el=document.getElementById(id);
+  const t=el.dataset.rawText!==undefined
+    ? el.dataset.rawText
+    : el.textContent.replace(/COPY$|COPIED!$/,'').trim();
+  const finish=()=>{const b=el.querySelector('.cpbtn');if(b){b.textContent='COPIED!';setTimeout(()=>b.textContent='COPY',1400);}};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(finish).catch(()=>{fallbackCopy(t);finish();});
+  } else { fallbackCopy(t); finish(); }
+}
+function fallbackCopy(t){
+  const ta=document.createElement('textarea');ta.value=t;
+  ta.style.cssText='position:fixed;opacity:0;top:0;left:0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);
+}
+
+function resetOut(t){
+  if(t==='enc'){
+    const el=document.getElementById('eout');
+    el.innerHTML='';
+    delete el.dataset.rawText;
+    const ph=document.createElement('span');ph.style.cssText='color:var(--mut);font-style:italic';
+    ph.textContent='Ciphertext appears here…'; el.appendChild(ph);
+    const cb=document.createElement('button');cb.className='cpbtn';cb.textContent='COPY';
+    cb.onclick=()=>doCopy('eout'); el.appendChild(cb);
+    document.getElementById('einfo').textContent='—';
+    document.getElementById('ecalc-body').innerHTML='';
+    hideErr('eerr');
+  } else {
+    const el=document.getElementById('dout');
+    el.innerHTML='';
+    delete el.dataset.rawText;
+    const ph=document.createElement('span');ph.style.cssText='color:var(--mut);font-style:italic';
+    ph.textContent='Plaintext appears here…'; el.appendChild(ph);
+    const cb=document.createElement('button');cb.className='cpbtn';cb.textContent='COPY';
+    cb.onclick=()=>doCopy('dout'); el.appendChild(cb);
+    document.getElementById('dinfo').textContent='—';
+    document.getElementById('dcalc-body').innerHTML='';
+    hideErr('derr');
+  }
+}
+
+function progAnim(id,done){
+  const el=document.getElementById(id);
+  el.style.transition='';el.style.width='0%';
+  let v=0,iv=setInterval(()=>{
+    v=Math.min(v+Math.random()*10,90);el.style.width=v+'%';
+    if(done()){clearInterval(iv);el.style.transition='width .3s';el.style.width='100%';
+      setTimeout(()=>el.style.width='0%',700);}
+  },60);
+}
+
+// stream characters into element
+// Fix 1: store raw text on dataset so doCopy reads it directly (not textContent which collapses whitespace)
+// Fix 2: use white-space:pre-wrap so spaces survive inline-block animation
+function streamChars(el, text, color){
+  el.innerHTML='';
+  el.dataset.rawText=text; // store for copy
+  const span=document.createElement('span');
+  span.style.whiteSpace='pre-wrap';
+  if(color) span.style.color=color;
+  el.appendChild(span);
+  const cpb=document.createElement('button');cpb.className='cpbtn';cpb.textContent='COPY';
+  cpb.onclick=()=>doCopy(el.id); el.appendChild(cpb);
+  const max=Math.min(text.length,200);
+  for(let i=0;i<max;i++){
+    const s=document.createElement('span');
+    // use inline (not inline-block) so whitespace is preserved
+    s.style.cssText=`opacity:0;animation:fu .12s ${i*14}ms ease both`;
+    s.textContent=text[i]; span.appendChild(s);
+  }
+  if(text.length>max){
+    const rest=document.createElement('span');
+    rest.style.cssText=`opacity:0;animation:fu .2s ${max*14}ms ease both`;
+    rest.textContent=text.slice(max); span.appendChild(rest);
+  }
+}
+
+// ══════════════════════════════════════════
+// ENCRYPT
+// ══════════════════════════════════════════
+function doEncrypt(){
+  const raw=document.getElementById('ptxt').value;
+  if(!raw){showErr('eerr','Enter a message.');return;}
+  for(const c of raw) if(c2n(c)===-1){showErr('eerr',`'${esc(c)}' not in lookup table.`);return;}
+  hideErr('eerr');
+  const res=compInv(K);
+  if(!res){showErr('eerr','Key matrix not invertible mod n.');return;}
+  Kinv=res.inv;
+
+  const btn=document.getElementById('ebtn');
+  btn.innerHTML='<div class="spin"></div> Encrypting…'; btn.disabled=true;
+
+  let done=false;
+  progAnim('ep',()=>done);
+
+  // pad to multiple of 3
+  const needed=(3-raw.length%3)%3;
+  const msg=raw+' '.repeat(needed);
+  const nums=msg.split('').map(c2n);
+  const blocks=[];
+  for(let i=0;i<nums.length;i+=3) blocks.push(nums.slice(i,i+3));
+  const results=blocks.map(b=>mvmul(K,b));
+  const cipher=results.flat().map(n2c).join('');
+
+  setTimeout(()=>{
+    done=true;
+    streamChars(document.getElementById('eout'), cipher, null);
+
+    const info=document.getElementById('einfo');
+    info.innerHTML=`
+      <span style="color:var(--dim)">Original&nbsp;</span><b style="color:var(--acc3)">${raw.length} chars</b><br>
+      ${needed?`<span style="color:var(--acc3)">＋${needed} padding space${needed>1?'s':''} appended</span><br>`:''}
+      <span style="color:var(--dim)">Blocks&nbsp;</span><b style="color:var(--acc3)">${blocks.length}</b><br>
+      <span style="color:var(--dim)">Output&nbsp;</span><b style="color:var(--acc3)">${cipher.length} chars</b><br>
+      <span style="color:var(--dim)">mod n&nbsp;</span><b style="color:var(--acc2)">${MOD()}</b>`;
+
+    if(showEnc){
+      buildCalcUI('ecalc-body', K, blocks, results, nums, msg, needed, 'enc');
+    }
+    btn.innerHTML='▶ Encrypt'; btn.disabled=false;
+  }, 400);
+}
+
+// ══════════════════════════════════════════
+// DECRYPT
+// ══════════════════════════════════════════
+function doDecrypt(){
+  const raw=document.getElementById('ctxt').value;
+  if(!raw){showErr('derr','Enter ciphertext.');return;}
+  if(raw.length%3!==0){showErr('derr',`Length ${raw.length} not a multiple of 3.`);return;}
+  for(const c of raw) if(c2n(c)===-1){showErr('derr',`'${esc(c)}' not in lookup table.`);return;}
+  hideErr('derr');
+  const res=compInv(K);
+  if(!res){showErr('derr','Key matrix not invertible.');return;}
+  Kinv=res.inv;
+
+  const btn=document.getElementById('dbtn');
+  btn.innerHTML='<div class="spin"></div> Decrypting…'; btn.disabled=true;
+
+  let done=false;
+  progAnim('dp',()=>done);
+
+  const nums=raw.split('').map(c2n);
+  const blocks=[];
+  for(let i=0;i<nums.length;i+=3) blocks.push(nums.slice(i,i+3));
+  const results=blocks.map(b=>mvmul(Kinv,b));
+  const plain=results.flat().map(n2c).join('');
+
+  setTimeout(()=>{
+    done=true;
+    streamChars(document.getElementById('dout'), plain, 'var(--grn)');
+
+    document.getElementById('dinfo').innerHTML=`
+      <span style="color:var(--dim)">Input&nbsp;</span><b style="color:var(--acc3)">${raw.length} chars</b><br>
+      <span style="color:var(--dim)">Blocks&nbsp;</span><b style="color:var(--acc3)">${blocks.length}</b><br>
+      <span style="color:var(--dim)">Output&nbsp;</span><b style="color:var(--acc3)">${plain.length} chars</b><br>
+      <span style="color:var(--dim)">mod n&nbsp;</span><b style="color:var(--acc2)">${MOD()}</b>`;
+
+    if(showDec){
+      buildCalcUI('dcalc-body', Kinv, blocks, results, nums, raw, 0, 'dec');
+    }
+    btn.innerHTML='▶ Decrypt'; btn.disabled=false;
+  }, 400);
+}
+
+// ══════════════════════════════════════════
+// CALCULATIONS UI — STEP + ANIMATED MMUL
+// ══════════════════════════════════════════
+// Use a unique prefix per calc panel to avoid DOM ID collisions between enc/dec panels
+let calcUIDCounter=0;
+
+function buildCalcUI(containerId, matrix, blocks, results, nums, msg, padding, mode){
+  const container=document.getElementById(containerId);
+  container.innerHTML='';
+  const uid=++calcUIDCounter;
+
+  // Step 1: char → number list
+  const step1=makeStep('1','Characters → Numbers');
+  const pairs=msg.split('').map((c,i)=>{
+    const isPad=padding>0&&i>=msg.length-padding;
+    const d=c===' '?'(sp)':esc(c);
+    return `<span style="display:inline-block;margin:2px 5px;${isPad?'color:var(--dim);font-style:italic':''}">
+      <span style="color:var(--acc2)">${d}</span><span style="color:var(--mut)">→</span><span style="color:var(--acc3)">${c2n(c)}</span>
+    </span>`;
+  }).join('');
+  step1.innerHTML+=`<div style="line-height:2;margin:6px 0">${pairs}</div>`;
+  if(padding>0){
+    const origLen=msg.length-padding;
+    step1.innerHTML+=`<div class="pad-notice">⚠ Message length (${origLen}) is not a multiple of 3 — appended ${padding} space${padding>1?'s':''} (value 0) as padding.</div>`;
+  }
+  container.appendChild(step1);
+
+  // Step 2: blocks overview
+  const step2=makeStep('2','3×1 Column Vectors');
+  const brows=blocks.map((b,i)=>`
+    <div style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;margin:4px 8px">
+      <div style="font-size:9px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase">${mode==='enc'?'M':'C'}${i+1}</div>
+      <div style="background:var(--s2);border:1px solid var(--bdr);padding:5px 10px;font-family:'Space Mono';font-size:12px;color:var(--acc3);line-height:1.9">
+        ${b.map(v=>`<div>${v}</div>`).join('')}
+      </div>
+    </div>`).join('');
+  step2.innerHTML+=`<div style="display:flex;flex-wrap:wrap;align-items:flex-start">${brows}</div>`;
+  container.appendChild(step2);
+
+  // Step 3: matrix label
+  const step3=makeStep('3', mode==='enc'?'Multiply: C = K · M (mod n)':'Multiply: M = K⁻¹ · C (mod n)');
+  step3.innerHTML+=buildStaticMatrix(matrix,'c-acc');
+  container.appendChild(step3);
+
+  // ── Growing output bar ──
+  // Each block contributes 3 chars. We show them dropping in one by one as blocks finish.
+  const outStep=makeStep('4', mode==='enc'?'Building Ciphertext…':'Building Plaintext…');
+  const outBar=document.createElement('div');
+  outBar.style.cssText='background:var(--s2);border:1px solid var(--bdr);padding:10px 14px;min-height:40px;display:flex;flex-wrap:wrap;gap:3px;align-items:center;margin-top:6px;';
+  const outLabel=document.createElement('div');
+  outLabel.style.cssText='font-size:9px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;width:100%';
+  outLabel.textContent=mode==='enc'?'Ciphertext so far:':'Plaintext so far:';
+  outBar.appendChild(outLabel);
+  outStep.appendChild(outBar);
+  container.appendChild(outStep);
+
+  // Pre-build one slot per output character (all hidden initially)
+  const allOutputChars=results.flat().map(n2c); // correct order
+  const charSlots=allOutputChars.map((ch,i)=>{
+    const slot=document.createElement('span');
+    slot.style.cssText=`display:inline-flex;align-items:center;justify-content:center;
+      width:24px;height:28px;border:1px solid var(--bdr);background:var(--s3);
+      font-size:12px;font-weight:700;color:var(--grn);opacity:0;
+      transition:opacity .2s, transform .2s, border-color .2s;
+      transform:translateY(-8px);`;
+    slot.textContent=ch===' '?'␣':ch; // show ␣ so space slots are visible
+    slot.title=`char ${i}: "${ch==='\n'?'\\n':ch}" (${c2n(ch)})`;
+    outBar.appendChild(slot);
+    return slot;
+  });
+
+  // Nav pills + speed control
+  const blockSec=document.createElement('div');
+  const nav=document.createElement('div');
+  nav.className='block-nav';
+  nav.style.marginTop='16px';
+  blocks.forEach((_,i)=>{
+    const p=document.createElement('button');
+    p.className='blk-pill'+(i===0?' on':'');
+    p.textContent=`Block ${i+1}`;
+    nav.appendChild(p);
+  });
+  const spdId=`spd-${uid}`;
+  const spdVId=`spd-v-${uid}`;
+  const spd=document.createElement('div');
+  spd.className='blk-speed';
+  spd.innerHTML=`Speed&nbsp;<input id="${spdId}" type="range" min="100" max="1500" value="700" step="100" style="width:80px;padding:0;">&nbsp;<span id="${spdVId}">700ms</span>`;
+  spd.querySelector('input').oninput=function(){document.getElementById(spdVId).textContent=this.value+'ms';};
+  nav.appendChild(spd);
+  blockSec.appendChild(nav);
+  const stageWrap=document.createElement('div');
+  blockSec.appendChild(stageWrap);
+  container.appendChild(blockSec);
+
+  // ── State ──
+  let currentAnim=null;
+  let autoTimer=null;
+  // Track which slots have been revealed so far
+  let revealedUpTo=-1; // index into allOutputChars
+
+  function getSpeed(){ return parseInt(document.getElementById(spdId).value)||700; }
+
+  function updatePills(idx){
+    nav.querySelectorAll('.blk-pill').forEach((p,i)=>{
+      p.classList.toggle('on', i===idx);
+      p.classList.toggle('done', i<idx);
+    });
+  }
+
+  // Reveal char slots for a given block index, animating them in one by one
+  function revealBlockChars(blockIdx, onDone){
+    const start=blockIdx*3;
+    let revealed=0;
+    for(let j=0;j<3;j++){
+      const gIdx=start+j;
+      if(gIdx>=charSlots.length) continue;
+      revealed++;
+      const slot=charSlots[gIdx];
+      const delay=j*160;
+      setTimeout(()=>{
+        slot.style.opacity='1';
+        slot.style.transform='translateY(0)';
+        slot.style.borderColor='var(--acc2)';
+        slot.style.color='var(--acc2)';
+        setTimeout(()=>{
+          slot.style.borderColor='var(--bdr)';
+          slot.style.color='var(--grn)';
+        }, 400);
+      }, delay);
+    }
+    // always call onDone after the last visible drop (or immediately if nothing to reveal)
+    const lastDelay=revealed>0 ? (revealed-1)*160+560 : 0;
+    setTimeout(onDone, lastDelay);
+  }
+
+  // Reset all slots to hidden (used when looping back)
+  function resetSlots(){
+    charSlots.forEach(slot=>{
+      slot.style.transition='none';
+      slot.style.opacity='0';
+      slot.style.transform='translateY(-8px)';
+      slot.style.borderColor='var(--bdr)';
+      slot.style.color='var(--grn)';
+      // re-enable transition after a frame
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        slot.style.transition='opacity .2s, transform .2s, border-color .2s';
+      }));
+    });
+    revealedUpTo=-1;
+  }
+
+  function showBlock(idx){
+    clearTimeout(autoTimer);
+    if(currentAnim) currentAnim.cancel();
+    updatePills(idx);
+    const speed=getSpeed();
+    const totalAnimDur=100 + speed*3 + 200; // time until animateBlock fires its onDone callback
+
+    currentAnim=animateBlock(
+      stageWrap, matrix, blocks[idx], results[idx], uid, idx, mode, speed,
+      // onBlockDone callback — fires when the result chars appear below the result matrix
+      ()=>{
+        // Drop the 3 output chars into the growing bar
+        revealBlockChars(idx, ()=>{
+          // After chars dropped: advance or loop
+          const nextIdx=idx+1;
+          if(nextIdx < blocks.length){
+            autoTimer=setTimeout(()=>showBlock(nextIdx), 300);
+          } else {
+            // Last block done — pause then loop from start
+            autoTimer=setTimeout(()=>{
+              resetSlots();
+              // small pause so the reset is visible, then restart
+              setTimeout(()=>showBlock(0), 200);
+            }, 1200);
+          }
+        });
+      }
+    );
+  }
+
+  // Wire pills — clicking jumps to that block and resets slots from that point
+  nav.querySelectorAll('.blk-pill').forEach((p,i)=>{
+    p.onclick=()=>{
+      // When jumping, re-hide all slots for blocks >= i
+      for(let g=i*3;g<charSlots.length;g++){
+        const slot=charSlots[g];
+        slot.style.transition='none';
+        slot.style.opacity='0';
+        slot.style.transform='translateY(-8px)';
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{
+          slot.style.transition='opacity .2s, transform .2s, border-color .2s';
+        }));
+      }
+      showBlock(i);
+    };
+  });
+
+  showBlock(0);
+}
+
+function makeStep(num, label){
+  const d=document.createElement('div');
+  d.style.cssText='margin-bottom:14px;';
+  d.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <div style="width:22px;height:22px;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">${num}</div>
+    <div style="font-family:Syne,sans-serif;font-size:13px;font-weight:700">${label}</div>
+  </div>`;
+  return d;
+}
+
+function buildStaticMatrix(M, cls){
+  const rows=M.map(r=>`<div class="bmat-row">${r.map(v=>`<div class="mc">${v}</div>`).join('')}</div>`).join('');
+  return `<div style="display:inline-flex;margin-top:6px"><div class="bmat ${cls}">${rows}</div></div>`;
+}
+
+// ══════════════════════════════════════════
+// BLOCK ANIMATION ENGINE
+// onDone: called once the result chars are revealed below the result vector
+// ══════════════════════════════════════════
+function animateBlock(container, M, vec, result, uid, blockIdx, mode, speed, onDone){
+  container.innerHTML='';
+  let cancelled=false;
+  const timers=[];
+  const T=(fn,ms)=>{const id=setTimeout(fn,ms);timers.push(id);return id;};
+  const cancel=()=>{cancelled=true;timers.forEach(clearTimeout);};
+
+  const pfx=`${uid}-${blockIdx}`;
+  const mLabel=mode==='enc'?'K':'K⁻¹';
+  const vLabel=(mode==='enc'?'M':'C')+(blockIdx+1);
+  const rLabel=(mode==='enc'?'C':'M')+(blockIdx+1);
+
+  const stage=document.createElement('div');
+  stage.className='mm-stage';
+
+  // Key matrix
+  const matWrap=document.createElement('div');
+  matWrap.className='bmat-wrap';
+  matWrap.innerHTML=`<div class="bmat-label">${mLabel}</div>`;
+  const bmatEl=document.createElement('div');bmatEl.className='bmat c-acc';
+  M.forEach((row,ri)=>{
+    const rowEl=document.createElement('div');rowEl.className='bmat-row';
+    row.forEach((v,ci)=>{
+      const cell=document.createElement('div');cell.className='mc';
+      cell.id=`mc-${pfx}-${ri}-${ci}`;cell.textContent=v;rowEl.appendChild(cell);
+    });
+    bmatEl.appendChild(rowEl);
+  });
+  matWrap.appendChild(bmatEl);
+  stage.appendChild(matWrap);
+
+  const opEl=document.createElement('div');opEl.className='mm-op';opEl.textContent='·';
+  stage.appendChild(opEl);
+
+  // Input vector
+  const vecWrap=document.createElement('div');
+  vecWrap.className='bmat-wrap';
+  vecWrap.innerHTML=`<div class="bmat-label">${vLabel}</div>`;
+  const bvecEl=document.createElement('div');bvecEl.className='bmat c-acc2';
+  vec.forEach((v,i)=>{
+    const rowEl=document.createElement('div');rowEl.className='bmat-row';
+    const cell=document.createElement('div');cell.className='mc';
+    cell.id=`vc-${pfx}-${i}`;cell.textContent=v;rowEl.appendChild(cell);
+    bvecEl.appendChild(rowEl);
+  });
+  vecWrap.appendChild(bvecEl);
+  stage.appendChild(vecWrap);
+
+  const eqEl=document.createElement('div');eqEl.className='mm-eq';eqEl.textContent='=';
+  stage.appendChild(eqEl);
+
+  // Result vector (starts as '?')
+  const resWrap=document.createElement('div');
+  resWrap.className='bmat-wrap';
+  resWrap.innerHTML=`<div class="bmat-label">${rLabel}</div>`;
+  const bresEl=document.createElement('div');bresEl.className='bmat c-grn';
+  result.forEach((_,i)=>{
+    const rowEl=document.createElement('div');rowEl.className='bmat-row';
+    const cell=document.createElement('div');cell.className='mc';
+    cell.id=`rc-${pfx}-${i}`;cell.textContent='?';cell.style.color='var(--mut)';
+    rowEl.appendChild(cell);bresEl.appendChild(rowEl);
+  });
+  resWrap.appendChild(bresEl);
+  // Chars shown below the result vector
+  const resCharsEl=document.createElement('div');
+  resCharsEl.className='bmat-result';resCharsEl.id=`rch-${pfx}`;
+  resWrap.appendChild(resCharsEl);
+  stage.appendChild(resWrap);
+
+  // Computation panel (one row per output row)
+  const calcPanel=document.createElement('div');calcPanel.className='mm-calc';
+  M.forEach((row,ri)=>{
+    const raw=row.reduce((s,v,j)=>s+v*vec[j],0);
+    const mod=MOD();
+    const modVal=((raw%mod)+mod)%mod;
+    const ch=n2c(modVal);
+    const disp=ch===' '?'(sp)':esc(ch);
+    const termsHTML=row.map((v,j)=>`<span class="ka">${v}</span><span style="color:var(--mut)">·</span><span class="kb">${vec[j]}</span>`).join('<span style="color:var(--mut)">+</span>');
+    const d=document.createElement('div');
+    d.className='mm-row-calc';d.id=`mrc-${pfx}-${ri}`;
+    d.innerHTML=`<div class="terms">${termsHTML}<span style="color:var(--mut)">=</span><span class="raw">${raw}</span>
+      <span class="mod">&nbsp;mod&nbsp;${mod}</span><span style="color:var(--mut)">=</span>
+      <span class="final">${modVal}</span>
+      <span class="fc" style="display:none">&nbsp;→&nbsp;<b>${disp}</b></span>
+    </div>`;
+    calcPanel.appendChild(d);
+  });
+  stage.appendChild(calcPanel);
+  container.appendChild(stage);
+
+  // ── ANIMATION SEQUENCE ──
+  const clearHL=()=>{
+    M.forEach((r,ri)=>r.forEach((_,ci)=>{
+      const el=document.getElementById(`mc-${pfx}-${ri}-${ci}`);
+      if(el) el.classList.remove('hl-row','hl-col');
+    }));
+    vec.forEach((_,vi)=>{
+      const el=document.getElementById(`vc-${pfx}-${vi}`);
+      if(el) el.classList.remove('hl-col');
+    });
+  };
+
+  let t=100;
+  for(let ri=0;ri<3;ri++){
+    const _ri=ri;
+    // 1. Highlight matrix row
+    T(()=>{
+      if(cancelled)return;
+      clearHL();
+      for(let ci=0;ci<3;ci++){
+        const el=document.getElementById(`mc-${pfx}-${_ri}-${ci}`);
+        if(el) el.classList.add('hl-row');
+      }
+    }, t);
+    // 2. Highlight vector
+    T(()=>{
+      if(cancelled)return;
+      for(let vi=0;vi<3;vi++){
+        const el=document.getElementById(`vc-${pfx}-${vi}`);
+        if(el) el.classList.add('hl-col');
+      }
+    }, t + speed*0.25);
+    // 3. Activate calc row
+    T(()=>{
+      if(cancelled)return;
+      const cr=document.getElementById(`mrc-${pfx}-${_ri}`);
+      if(cr) cr.classList.add('active');
+    }, t + speed*0.5);
+    // 4. Reveal result cell + show character
+    T(()=>{
+      if(cancelled)return;
+      const rc=document.getElementById(`rc-${pfx}-${_ri}`);
+      if(rc){ rc.textContent=result[_ri]; rc.classList.add('hl-res'); rc.style.color=''; }
+      const cr=document.getElementById(`mrc-${pfx}-${_ri}`);
+      if(cr){
+        cr.classList.remove('active'); cr.classList.add('done');
+        const fc=cr.querySelector('.fc'); if(fc) fc.style.display='inline';
+      }
+    }, t + speed*0.85);
+    t+=speed;
+  }
+
+  // After all 3 rows: show summary below result vector, then call onDone
+  T(()=>{
+    if(cancelled)return;
+    clearHL();
+    for(let ri=0;ri<3;ri++){
+      const rc=document.getElementById(`rc-${pfx}-${ri}`);
+      if(rc) rc.classList.remove('hl-res');
+    }
+    // Show the 3 decoded chars below the result vector, one by one
+    const rch=document.getElementById(`rch-${pfx}`);
+    if(rch){
+      rch.innerHTML='';
+      result.forEach((v,i)=>{
+        const ch=n2c(v);
+        const disp=ch===' '?'(sp)':esc(ch);
+        const sp=document.createElement('span');
+        sp.style.cssText=`display:inline-block;margin:0 3px;color:var(--grn);font-weight:700;opacity:0;
+          animation:blockCharDrop .35s ${i*180}ms ease both;`;
+        sp.textContent=disp;
+        rch.appendChild(sp);
+      });
+      rch.classList.add('on');
+    }
+    // Fire onDone after the last char has animated in
+    const donePause=3*180+400;
+    T(()=>{ if(!cancelled && onDone) onDone(); }, donePause);
+  }, t+100);
+
+  return {cancel};
+}
+
+// ══════════════════════════════════════════
+// KEY MATRIX
+// ══════════════════════════════════════════
+function readK(){
+  const ids=['k00','k01','k02','k10','k11','k12','k20','k21','k22'];
+  const v=ids.map(id=>parseInt(document.getElementById(id).value));
+  if(v.some(isNaN))return null;
+  return[[v[0],v[1],v[2]],[v[3],v[4],v[5]],[v[6],v[7],v[8]]];
+}
+
+let kTimer=null;
+function kChanged(){
+  clearTimeout(kTimer);
+  kTimer=setTimeout(()=>{
+    const m=readK();
+    if(!m){ showErr('kerr','All cells must be integers.'); return; }
+    const res=compInv(m);
+    if(res){
+      K=m; Kinv=res.inv;
+      hideErr('kerr');
+      // live-update derived displays if already visible
+      if(document.getElementById('kinfo').style.display!=='none'){
+        popEl('kdet',res.d);
+        popEl('kdetm',res.dm);
+        popEl('kdinv',res.di);
+        popEl('kn',MOD());
+        const kd=document.getElementById('kinvdisp');
+        kd.innerHTML=matDisp(Kinv,'var(--grn)');
+        kd.style.animation='none'; void kd.offsetWidth;
+        kd.style.animation='valPop .5s ease both';
+        setTimeout(()=>kd.style.animation='',600);
+      }
+    } else {
+      // matrix is now invalid — tell the user immediately
+      const dm=((det3(m)%MOD())+MOD())%MOD();
+      showErr('kerr',`⚠ Invalid key — det(K) mod ${MOD()} = ${dm}, not coprime with ${MOD()}. Matrix is not invertible.`);
+      // keep kinfo hidden / greyed out
+      document.getElementById('kinfo').style.display='none';
+    }
+  },300);
+}
+
+function validateK(){
+  const m=readK();
+  if(!m){showErr('kerr','All cells must be integers.');return;}
+  hideErr('kerr');
+  const res=compInv(m);
+  if(!res){
+    const dm=((det3(m)%MOD())+MOD())%MOD();
+    showErr('kerr',`det(K) mod ${MOD()} = ${dm} — not invertible. Try different values.`);
+    document.getElementById('kinfo').style.display='none';
+    return;
+  }
+  K=m; Kinv=res.inv;
+  popEl('kdet',res.d);
+  popEl('kdetm',res.dm);
+  popEl('kdinv',res.di);
+  popEl('kn',MOD());
+  document.getElementById('kinvdisp').innerHTML=matDisp(Kinv,'var(--grn)');
+  document.getElementById('kinfo').style.display='block';
+}
+
+function resetK(){
+  const def=[[12,25,7],[9,18,11],[4,10,3]];
+  ['k00','k01','k02','k10','k11','k12','k20','k21','k22'].forEach((id,i)=>{
+    document.getElementById(id).value=def[Math.floor(i/3)][i%3];
+  });
+  K=def; validateK();
+}
+
+function matDisp(M, color){
+  return M.map(r=>`<div>${r.map(v=>`<span style="display:inline-block;width:44px;text-align:right;color:${color}">${v}</span>`).join('')}</div>`).join('');
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+(()=>{
+  const res=compInv(K);
+  if(res) Kinv=res.inv;
+})();
+</script>
+</body>
+</html>
